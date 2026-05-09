@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BotPanel — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+  <!-- GLOW VERDE FONDO -->
+  <div class="glow-green"></div>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash">
+    <video id="videoSplash" autoplay muted playsinline>
+      <source src="logovd.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- FORMULARIO LOGIN -->
+  <div id="loginWrap" class="hidden">
+    <div class="card">
+
+      <div class="badge">
+        <div class="badge-dot"></div>
+        BOTPANEL v2.0
+      </div>
+
+      <div class="logo-wrap">
+        <img src="logo.png" alt="BotPanel logo"/>
+        <div class="logo-texto"><span class="bot">Bot</span><span class="panel">Panel</span></div>
+      </div>
+      <div class="subtitulo">Panel de gestión de bots de WhatsApp</div>
+
+      <label>Email</label>
+      <input type="email" id="email" placeholder="admin@botpanel.com" />
+
+      <label>Contraseña</label>
+      <input type="password" id="password" placeholder="••••••••" />
+
+      <button id="btnLogin" onclick="login()">Entrar</button>
+
+      <div class="mensaje" id="mensaje"></div>
+
+      <hr class="divider"/>
+      <div class="footer">BotPanel &copy; 2026 — WhatsApp Automation</div>
+
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8080";
+
+    const video     = document.getElementById("videoSplash");
+    const splash    = document.getElementById("splash");
+    const loginWrap = document.getElementById("loginWrap");
+
+    // Cuando termina el vídeo muestra el login
+    video.addEventListener("ended", mostrarLogin);
+
+    // Fallback: si el vídeo no carga en 6s mostramos el login igualmente
+    setTimeout(() => {
+      if (splash.style.display !== "none") mostrarLogin();
+    }, 6000);
+
+    function mostrarLogin() {
+      splash.classList.add("fadeOut");
+      setTimeout(() => {
+        splash.style.display = "none";
+        loginWrap.classList.remove("hidden");
+        loginWrap.classList.add("fadeIn");
+      }, 600);
+    }
+
+    async function login() {
+      const email    = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        mostrarMensaje("Por favor rellena todos los campos", "error");
+        return;
+      }
+
+      const btn = document.getElementById("btnLogin");
+      btn.disabled    = true;
+      btn.textContent = "Entrando...";
+
+      try {
+        const respuesta = await fetch(`${API}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const datos = await respuesta.json();
+
+        if (respuesta.ok) {
+          localStorage.setItem("token",     datos.token);
+          localStorage.setItem("nombre",    datos.nombre);
+          localStorage.setItem("email",     datos.email);
+          localStorage.setItem("rol",       datos.rol);
+          localStorage.setItem("empresaId", datos.empresaId);
+
+          mostrarMensaje("¡Bienvenido " + datos.nombre + "!", "exito");
+          setTimeout(() => { window.location.href = "dashboard.html"; }, 1000);
+
+        } else {
+          mostrarMensaje(datos.error || "Email o contraseña incorrectos", "error");
+          btn.disabled    = false;
+          btn.textContent = "Entrar";
+        }
+
+      } catch (error) {
+        mostrarMensaje("No se puede conectar con el servidor. ¿Está arrancado Spring Boot?", "error");
+        btn.disabled    = false;
+        btn.textContent = "Entrar";
+      }
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      const div     = document.getElementById("mensaje");
+      div.textContent = texto;
+      div.className   = "mensaje " + tipo;
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") login();
+    });
+
+    window.onload = () => {
+      if (localStorage.getItem("token")) {
+        window.location.href = "dashboard.html";
+      }
+    };
+  </script>
+
+</body>
+</html>
